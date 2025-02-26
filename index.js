@@ -60,41 +60,34 @@ if (process.env.SEED_DB) {
         ('C1G6', 'Qara şort bluz', 120, 20, 25, 10);`);
 }
 
+function handleQueryResult(err, rows, res) {
+  if (err) {
+    console.log(err);
+    return res.status(500).send(err.message);
+  } else {
+    return res.json(rows);
+  }
+}
 app.get("/clothes", (req, res) => {
   const { query } = req.query;
   if (query) {
     db.all(
-      `SELECT * FROM clothes c LEFT JOIN orders o ON o.clothe_id = c.id GROUP BY c.id WHERE name LIKE '%${query}%' OR code LIKE '%${query}%' ORDER BY sold DESC`,
-      (err, rows) => {
-        if (err) {
-          return res.status(500).send(err.message);
-        } else {
-          return res.json(rows);
-        }
-      }
+      `SELECT c.*, count(o.id) as sold FROM clothes c LEFT JOIN orders o ON o.clothe_id = c.id WHERE name LIKE '%${query}%' OR code LIKE '%${query}%' GROUP BY c.id ORDER BY sold DESC`,
+      (err, rows) => handleQueryResult(err, rows, res)
     );
     return;
   }
 
   db.all(
     "SELECT c.*, count(o.id) as sold FROM clothes c LEFT JOIN orders o ON o.clothe_id = c.id GROUP BY c.id ORDER BY sold DESC",
-    (err, rows) => {
-      if (err) {
-        return res.status(500).send(err.message);
-      } else {
-        return res.json(rows);
-      }
-    }
+    (err, rows) => handleQueryResult(err, rows, res)
   );
 });
 
 app.get("/clothes/:id", (req, res) => {
-  db.get("SELECT * FROM clothes WHERE id = ?", [req.params.id], (err, row) => {
-    if (err) {
-      return res.status(500).send(err.message);
-    }
-    return res.json(row);
-  });
+  db.get("SELECT * FROM clothes WHERE id = ?", [req.params.id], (err, row) =>
+    handleQueryResult(err, row, res)
+  );
 });
 
 app.post("/orders", (req, res) => {
@@ -115,14 +108,7 @@ app.post("/orders", (req, res) => {
   db.get(
     "SELECT * FROM clothes WHERE id = ?",
     [req.body.clothe_id],
-    (err, row) => {
-      if (err) {
-        return res.status(500).send(err.message);
-      }
-      if (!row) {
-        return res.status(400).send("Clothe not found");
-      }
-    }
+    (err, row) => handleQueryResult(err, row, res)
   );
 
   db.run(
@@ -130,6 +116,7 @@ app.post("/orders", (req, res) => {
     [req.body.clothe_id],
     function (err) {
       if (err) {
+        console.log(err);
         return res.status(500).send(err.message);
       }
       return res.json({ id: this.lastID });
@@ -140,6 +127,7 @@ app.post("/orders", (req, res) => {
 app.delete("/orders/:id", (req, res) => {
   db.run("DELETE FROM orders WHERE id = ?", [req.params.id], (err) => {
     if (err) {
+      console.log(err);
       return res.status(500).send(err.message);
     }
     return res.send("Order deleted");
@@ -149,6 +137,7 @@ app.delete("/orders/:id", (req, res) => {
 app.get("/orders", (req, res) => {
   db.all("SELECT * FROM orders", (err, rows) => {
     if (err) {
+      console.log(err);
       res.status(500).send(err.message);
     } else {
       res.json(rows);
@@ -160,12 +149,7 @@ app.get("/orders/:id", (req, res) => {
   db.get(
     "SELECT * FROM orders JOIN clothes on clothes.id - orders.clothe_id WHERE clothes.id = ?",
     [req.params.id],
-    (err, row) => {
-      if (err) {
-        res.status(500).send(err.message);
-      }
-      res.json(row);
-    }
+    (err, row) => handleQueryResult(err, row, res)
   );
 });
 
