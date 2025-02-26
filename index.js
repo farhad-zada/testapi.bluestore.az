@@ -64,7 +64,7 @@ app.get("/clothes", (req, res) => {
   const { query } = req.query;
   if (query) {
     db.all(
-      `SELECT * FROM clothes c LEFT JOIN orders o ON o.clothe_id = c.id GROUP BY c.id WHERE name LIKE '%${query}%' OR code LIKE '%${query}%'`,
+      `SELECT * FROM clothes c LEFT JOIN orders o ON o.clothe_id = c.id GROUP BY c.id WHERE name LIKE '%${query}%' OR code LIKE '%${query}%' ORDER BY sold DESC`,
       (err, rows) => {
         if (err) {
           return res.status(500).send(err.message);
@@ -77,7 +77,7 @@ app.get("/clothes", (req, res) => {
   }
 
   db.all(
-    "SELECT c.*, count(o.id) as sold FROM clothes c LEFT JOIN orders o ON o.clothe_id = c.id GROUP BY c.id",
+    "SELECT c.*, count(o.id) as sold FROM clothes c LEFT JOIN orders o ON o.clothe_id = c.id GROUP BY c.id ORDER BY sold DESC",
     (err, rows) => {
       if (err) {
         return res.status(500).send(err.message);
@@ -135,6 +135,15 @@ app.post("/orders", (req, res) => {
       return res.json({ id: this.lastID });
     }
   );
+});
+
+app.delete("/orders/:id", (req, res) => {
+  db.run("DELETE FROM orders WHERE id = ?", [req.params.id], (err) => {
+    if (err) {
+      return res.status(500).send(err.message);
+    }
+    return res.send("Order deleted");
+  });
 });
 
 app.get("/orders", (req, res) => {
