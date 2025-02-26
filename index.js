@@ -64,7 +64,7 @@ app.get("/clothes", (req, res) => {
   const { query } = req.query;
   if (query) {
     db.all(
-      `SELECT * FROM clothes WHERE name LIKE '%${query}%' OR code LIKE '%${query}%'`,
+      `SELECT * FROM clothes c LEFT JOIN orders o ON o.clothe_id = c.id GROUP BY c.id WHERE name LIKE '%${query}%' OR code LIKE '%${query}%'`,
       (err, rows) => {
         if (err) {
           return res.status(500).send(err.message);
@@ -77,7 +77,7 @@ app.get("/clothes", (req, res) => {
   }
 
   db.all(
-    "SELECT c.*, count(*) as sold FROM clothes c LEFT JOIN orders o ON o.clothe_id = c.id GROUP BY c.id",
+    "SELECT c.*, count(o.id) as sold FROM clothes c LEFT JOIN orders o ON o.clothe_id = c.id GROUP BY c.id",
     (err, rows) => {
       if (err) {
         return res.status(500).send(err.message);
